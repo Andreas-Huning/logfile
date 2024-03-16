@@ -5,8 +5,8 @@
                 #********** Tasks **********#
                 #***************************#
 /*
-				[] Welche 10 Lizenzen greifen am häufigsten zu und wie oft?
-				[] Lizenzverstöße - Eine Lizenz auf einem Gerät erlaubt?
+				[x] Welche 10 Lizenzen greifen am häufigsten zu und wie oft?
+				[x] Lizenzverstöße - Eine Lizenz auf einem Gerät erlaubt?
 				[] Welche Lizenz auf welcher Hardware
 */
 
@@ -16,11 +16,13 @@
                 #********** ToDo **********#
                 #**************************#
 /*
-				[x] Datei auslesen - Date zu groß und kann nicht ausgelesen werden
+				[x] Datei auslesen - Datei zu groß und kann nicht ausgelesen werden
 				[x] Datei Zeilenweise auslesen
 				[x] Anzahl der Datenreihen zählen
-				[] Funktion zum Zählen der Seriennumern
-
+				[x] Funktion zum Zählen der Seriennumern
+				[x] Funktion zum analysieren von Lizenzverstöße
+				[] Laufzeit zu lange beim Einlesen
+				[] Fehlermeldung: Warning: gzdecode(): data error in C:\xampp\htdocs\index.php on line 320 
 
 */
 #**********************************************************************************#
@@ -236,6 +238,8 @@ if(DEBUG)	            echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Di
 							// Zähle die Zeilen
 							$zeilenZaehler++;
 							
+
+
 						}// Jede Zeile lesen bis das Ende der Datei erreicht wird END
 
 						// Datei schließen
@@ -265,6 +269,136 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
 
 #**********************************************************************************#
 
+                #**********************************************#
+                #********** COUNT LICENSE VIOLATIONS **********#
+                #**********************************************#
+
+                // Funktion zum Zählen der Verstöße gegen die Regel für jede Seriennummer
+                function zaehleVerstoesse($datei) 
+				{
+if(DEBUG_F)		    echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
+					
+					$verstoesse = []; // Array zum Speichern der Verstöße
+					$macAdressen = []; // Array zum Speichern der MAC-Adressen
+					
+if(DEBUG_V)	        echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$datei: $datei <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+					// Datei im Lesemodus öffnen
+					$handle = fopen($datei, "r");
+
+					// Prüfen ob Datei geöffnet werden konnte
+					if ($handle) 
+					{
+if(DEBUG)	            echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Die Datei konnte geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+						// Jede Zeile lesen bis das Ende der Datei erreicht wird
+						while(($zeile = fgets($handle)) !== false)
+						{
+														
+							// Den Abschnitt mit der Seriennumer suchen
+							preg_match('/serial=(\S+)/', $zeile, $matcheSerial);// Muster sucht nach dem String und endet beim Leerzeichen
+
+							// Finde den Index des specs-Felds
+							$specsIndex = strpos($zeile, 'specs=');
+
+							// Prüfen ob Spec vorhanden ist
+							if($specsIndex !== false)
+							{
+// if(DEBUG)	                    echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: String specs= gefunden <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+								// Herausziehen des specs-Felds
+								$specs = substr($zeile, $specsIndex);
+								$specs = substr($specs, strpos($specs, '=') + 1);
+
+// if(DEBUG_V)	                    echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$specs: $specs <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+								// Dekodiere die specs
+								if($specs !== NULL){
+// if(DEBUG)	                    	echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Dekodieren der Spec <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+									$specsDecoded = json_decode(gzdecode(base64_decode($specs)), true);
+								}else{
+if(DEBUG)	                    	echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Dekodieen der Spec fehlgeschlagen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+									$specsDecoded = null;
+								}
+								
+							} else {
+// if(DEBUG)	                    echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: String specs= nicht gefunden <i>(" . basename(__FILE__) . ")</i></p>\n";				
+								$specsDecoded = null;
+								
+							}// Prüfen ob Spec vorhanden ist END
+/*
+if(DEBUG_V)	                    echo "<pre class='debug value'><b>Line " . __LINE__ . "</b>: \$specsDecoded <i>(" . basename(__FILE__) . ")</i>:<br>\n";					
+if(DEBUG_V)	                    print_r($specsDecoded);					
+if(DEBUG_V)	                    echo "</pre>"; 				
+*/
+								// Mac-Adresse und Seriennummer prüfen 
+								if ($specsDecoded !== null)
+								{
+									$mac = $specsDecoded['mac'];
+// if(DEBUG_V)	                    	echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$mac: $mac <i>(" . basename(__FILE__) . ")</i></p>\n";
+														
+									// Überprüfe, ob die MAC-Adresse bereits im Array vorhanden ist
+									if (!in_array($mac, $macAdressen)) 
+									{
+// if(DEBUG)	                        	echo "<p class='debug'><b>Line " . __LINE__ . "</b>: MAC Adresse ist noch nicht vorhanden. <i>(" . basename(__FILE__) . ")</i></p>\n";
+                                    	$macAdressen[] = $mac; // Füge die MAC-Adresse dem Array hinzu
+
+										// Überprüfen ob eine Seriennummer vorhanden ist
+                                    	if (isset($matcheSerial[1])) 
+										{
+											$serial = $matcheSerial[1]; // Serial extrahieren
+// if(DEBUG_V)	                        		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
+									
+											// Prüfen, ob die Seriennummer bereits im Array (Verstöße) vorhanden ist
+                                        	if (isset($verstoesse[$serial])) 
+											{
+// if(DEBUG)	                            		echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: Die Seriennummer ist bereits im Array (Verstöße) vorhanden. <i>(" . basename(__FILE__) . ")</i></p>\n";
+											
+												// Wenn ja, erhöhe den Verstoßzähler um eins
+												$verstoesse[$serial]++;
+											} else {
+// if(DEBUG)	                            		echo "<p class='debug'><b>Line " . __LINE__ . "</b>: Die Seriennummer ist nicht im Array (Verstöße) vorhanden. <i>(" . basename(__FILE__) . ")</i></p>\n";
+											
+												// Wenn nicht, setze den Verstoßzähler auf eins
+												$verstoesse[$serial] = 1;
+											}// Prüfen, ob die Seriennummer bereits im Array (Verstöße) vorhanden ist END
+
+										}// Überprüfen ob eine Seriennummer vorhanden ist END
+
+									}// Überprüfe, ob die MAC-Adresse bereits im Array vorhanden ist END	
+
+								}// Mac-Adresse und Seriennummer prüfen END
+
+						}// Jede Zeile lesen bis das Ende der Datei erreicht wird END
+
+						// Datei schließen
+						fclose($handle);
+if(DEBUG)				echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: LogDatei geschlossen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+	                    // Array in absteigender Reihenfolge sortieren
+						arsort($verstoesse);
+/*
+if(DEBUG_V)	            echo "<pre class='debug value'><b>Line " . __LINE__ . "</b>: \$verstoesse <i>(" . basename(__FILE__) . ")</i>:<br>\n";					
+if(DEBUG_V)	            print_r($verstoesse);					
+if(DEBUG_V)	            echo "</pre>"; 		
+*/
+						return $verstoesse;			
+
+
+					} else {
+if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Die Datei konnte nicht geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
+										
+										
+					} // Prüfen ob Datei geöffnet werden konnte END 
+
+
+				}// Funktion zum Zählen der Verstöße gegen die Regel für jede Seriennummer END
+
+
+#**********************************************************************************#
+
 
                 #******************************************#
                 #********** CALLING THE FUNCTION **********#
@@ -280,7 +414,11 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
 // if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
 
 				// Zählen der häufigsten Seriennummer
-				$serialCounts = countSerial($logDatei);
+				// $serialCounts = countSerial($logDatei);
+
+
+				// Zähler der Lizenzverstöße
+                $lizenzverstoesse = zaehleVerstoesse($logDatei);
 
 #**********************************************************************************#
 ?>
@@ -298,19 +436,37 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
 	
 	<body>	
 		<h1>Logdatei auslesen</h1>
-        <h2>Anzahl Datensätze / Zeilen: <?php echo $serialCounts['linesTotal']; ?></h2>
+		<h2> <?php echo (isset($serialCounts['linesTotal'])) ? "Anzahl Datensätze / Zeilen:".$serialCounts['linesTotal']:''; ?></h2>
 
-        <h2>Die ersten 10 Seriennummern:</h2>
         <?php
             // Array der Seriennummern ausgeben
             $counter = 0;
-            foreach ($serialCounts['serialNumbers'] as $serial => $count) {
-                echo "<p>Seriennummer: $serial, Anzahl: $count</p>";
-                $counter++;
-                if ($counter >= 10) {
-                    break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
-                }
-            }
+			if(isset($serialCounts['serialNumbers']))
+			{
+				echo "<h2>Die häufigsten 10 Seriennummern:</h2>";
+				foreach ($serialCounts['serialNumbers'] as $serial => $count) {
+					echo "<p>Seriennummer: $serial, Anzahl: $count</p>";
+					$counter++;
+					if ($counter >= 10) {
+						break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+					}
+				}
+			}
+        ?>
+		<?php
+            // Array der Verstöße ausgeben
+            $counter = 0;
+			if(isset($lizenzverstoesse))
+			{
+				echo "<h2>Die ersten 10 Verstöße mit Seriennummern auf mehreren mac-Adressen:</h2>";
+				foreach ($lizenzverstoesse as $verstoss => $count) {
+					echo "<p>Seriennummer: $verstoss, Anzahl der verschieden Mac-Adressen: $count</p>";
+					$counter++;
+					if ($counter >= 10) {
+						break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+					}
+				}
+			}
         ?>
 	</body>
 	
