@@ -17,7 +17,10 @@
                 #**************************#
 /*
 				[x] Datei auslesen - Date zu groß und kann nicht ausgelesen werden
-				[] Datei Zeilenweise auslesen
+				[x] Datei Zeilenweise auslesen
+				[x] Anzahl der Datenreihen zählen
+				[] Funktion zum Zählen der Seriennumern
+
 
 */
 #**********************************************************************************#
@@ -44,7 +47,7 @@
                 #********** Variablen **********#
                 #*******************************#
 
-				$zeilenNummer = 5;
+				$zeilenNummer = 1;
 
 #**********************************************************************************#
 
@@ -52,7 +55,7 @@
                 #********** Datei auslesen **********#
                 #************************************#
 
-				// Date zu groß und kann nicht ausgelesen werden
+				// Datei zu groß und kann nicht ausgelesen werden
 // 				$fileContentArray = file($logDatei);				
 // if(DEBUG_V)		echo "<pre class='debug value'><b>Line " . __LINE__ . "</b>: \$arrayName <i>(" . basename(__FILE__) . ")</i>:<br>\n";					
 // if(DEBUG_V)		print_r($array);					
@@ -99,7 +102,7 @@ if(DEBUG_V)						echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$se
 								// Datei schließen
 								fclose($handle);
 if(DEBUG)						echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: LogDatei geschlossen <i>(" . basename(__FILE__) . ")</i></p>\n";				
-								return;
+								return $serial;
 
 							}// Zeile gefunden END
 
@@ -119,10 +122,73 @@ if(DEBUG)				echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Lo
 
 				}// Eine Zeile der Datei auslesen END
 
-readDatafromFile($logDatei, $zeilenNummer);
+
 
 #**********************************************************************************#
 
+ 				#*********************************************#
+                #********** COUNT LINES IN LOG FILE **********#
+                #*********************************************#
+
+				// Funktion zum Zählen der Zeilen in der Datei
+				function countLines($datei)
+				{
+if(DEBUG_F)			echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+					// Zähler für alle Zeilen
+					$zeilenZaehler=0;
+
+					// Datei im Lesemodus öffnen
+					$handle = fopen($datei, "r");
+
+					// Prüfen ob Datei geöffnet werden konnte
+					if ($handle) 
+					{
+if(DEBUG)				echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: LogDatei erfolgreich geöffnet <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+						//feof — Prüft, ob ein Dateizeiger am Ende der Datei steht
+						while (!feof($handle)) {
+							
+							//fgets — Liest die Zeile von der Position des Dateizeigers
+							fgets($handle);
+
+							// Zähle die Zeilen
+							$zeilenZaehler++;
+						}
+						// Datei schließen
+						fclose($handle);
+if(DEBUG)				echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: LogDatei geschlossen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$zeilenZaehler: $zeilenZaehler <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+						// Anzahl der Zeilen zurückgeben
+						return $zeilenZaehler;
+
+					} else {
+if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Die Datei konnte nicht geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
+					
+					}// Prüfen ob Datei geöffnet werden konnte END
+
+				}// Funktion zum Zählen der Zeilen in einer Datei END
+
+#**********************************************************************************#
+
+
+                #******************************************#
+                #********** CALLING THE FUNCTION **********#
+                #******************************************#
+
+				// Eine Zeile auslesen
+				$serail = readDatafromFile($logDatei, $zeilenNummer);
+if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serail: $serail <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+
+				// Datensätze zählen
+				$linesTotal = countLines($logDatei);
+if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+
+#**********************************************************************************#
 ?>
 
 <!doctype html>
