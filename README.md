@@ -1,0 +1,1 @@
+Logfile auslesen und auswerten
