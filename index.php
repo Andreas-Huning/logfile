@@ -130,7 +130,7 @@ if(DEBUG)				echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Lo
                 #********** COUNT LINES IN LOG FILE **********#
                 #*********************************************#
 
-				// Funktion zum Zählen der Zeilen in der Datei
+				// Funktion zum Zählen der Zeilen in einer Datei
 				function countLines($datei)
 				{
 if(DEBUG_F)			echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
@@ -173,20 +173,52 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
 
 #**********************************************************************************#
 
+ 				#**********************************************#
+                #********** COUNT SERIAL IN LOG FILE **********#
+                #**********************************************#
+
+				// Funktion zum Zählen der Seriennummern
+				function countSerial($datei, $linesTotal)
+				{
+if(DEBUG_F)			echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+if(DEBUG_V)			echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$datei: $datei <i>(" . basename(__FILE__) . ")</i></p>\n";
+if(DEBUG_V)			echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+					// Seriennummern auslesen - Zu viele Schleifen da bei jedem Aufruf der ReadDatafromFile erneut bei 1 angefangen wird zu zählen
+					for($aktuelleZeile = 1;$aktuelleZeile <= 1000; $aktuelleZeile++)
+					{
+if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$aktuelleZeile: $aktuelleZeile <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+						$serial = readDatafromFile($datei, $aktuelleZeile);
+if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+					}// Seriennummern auslesen END
+
+
+
+
+				}// Funktion zum Zählen der Seriennummern END
+
+
+#**********************************************************************************#
+
 
                 #******************************************#
                 #********** CALLING THE FUNCTION **********#
                 #******************************************#
 
 				// Eine Zeile auslesen
-				$serail = readDatafromFile($logDatei, $zeilenNummer);
-if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serail: $serail <i>(" . basename(__FILE__) . ")</i></p>\n";
+				// $serial = readDatafromFile($logDatei, $zeilenNummer);
+// if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
 
 
 				// Datensätze zählen
 				$linesTotal = countLines($logDatei);
 if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
 
+				// Zählen der häufigsten Seriennummer
+				countSerial($logDatei, $linesTotal);
 
 #**********************************************************************************#
 ?>
