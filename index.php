@@ -94,7 +94,7 @@ if(DEBUG)						echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Gesuchte 
 if(DEBUG_V)						echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$zeile: $zeile <i>(" . basename(__FILE__) . ")</i></p>\n";
 								
 								// Den Abschnitt mit der Seriennumer suchen
-								preg_match('/serial=(\S+)/', $zeile, $matches);
+								preg_match('/serial=(\S+)/', $zeile, $matches);// Muster sucht nach dem String und endet beim Leerzeichen
 								$serial = $matches[1]; // Serial extrahieren
 if(DEBUG_V)						echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
 
@@ -178,13 +178,13 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
                 #**********************************************#
 
 				// Funktion zum Zählen der Seriennummern
-				function countSerial($datei, $linesTotal)
+				function countSerial($datei)
 				{
 if(DEBUG_F)			echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
 
 if(DEBUG_V)			echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$datei: $datei <i>(" . basename(__FILE__) . ")</i></p>\n";
-if(DEBUG_V)			echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
-
+// if(DEBUG_V)			echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
+/*
 					// Seriennummern auslesen - Zu viele Schleifen da bei jedem Aufruf der ReadDatafromFile erneut bei 1 angefangen wird zu zählen
 					for($aktuelleZeile = 1;$aktuelleZeile <= 1000; $aktuelleZeile++)
 					{
@@ -194,9 +194,71 @@ if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$aktu
 if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
 
 					}// Seriennummern auslesen END
+*/
+					// Datei im Lesemodus öffnen
+					$handle = fopen($datei, "r");
 
+					// Prüfen ob Datei geöffnet werden konnte
+					if ($handle) 
+					{
+if(DEBUG)	            echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Die Datei konnte geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
 
+						// Zähler für alle Zeilen
+						$zeilenZaehler=1;
 
+						// Jede Zeile lesen bis das Ende der Datei erreicht wird
+						while(($zeile = fgets($handle)) !== false)
+						{
+							// Den Abschnitt mit der Seriennumer suchen
+							preg_match('/serial=(\S+)/', $zeile, $matches);// Muster sucht nach dem String und endet beim Leerzeichen
+
+							// Überprüfen ob eine Seriennummer vorhanden ist
+							if (isset($matches[1])) 
+							{
+								$serial = $matches[1]; // Serial extrahieren
+// if(DEBUG_V)						echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$serial: $serial <i>(" . basename(__FILE__) . ")</i></p>\n";
+							
+								// Seriennummer zählen
+								if (isset($serialCounts[$serial])) 
+								{
+// if(DEBUG)							echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: Seriennummer bereits im Array, hochzählen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+									$serialCounts[$serial]++;
+								} else {
+// if(DEBUG)							echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: Seriennummer noch nicht im Array, wird mit 1 initialisiert <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+									$serialCounts[$serial] = 1;
+
+								}// Seriennummer zählen END
+
+							}// Überprüfen ob eine Seriennummer vorhanden ist END
+
+							// Zähle die Zeilen
+							$zeilenZaehler++;
+							
+						}// Jede Zeile lesen bis das Ende der Datei erreicht wird END
+
+						// Datei schließen
+						fclose($handle);
+if(DEBUG)				echo "<p class='debug hint'><b>Line " . __LINE__ . "</b>: LogDatei geschlossen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+
+						// Array in absteigender Reihenfolge sortieren
+						arsort($serialCounts);
+
+						$daten['linesTotal'] = $zeilenZaehler;
+						$daten['serialNumbers'] = $serialCounts;
+/*
+if(DEBUG_V)	            echo "<pre class='debug value'><b>Line " . __LINE__ . "</b>: \$daten <i>(" . basename(__FILE__) . ")</i>:<br>\n";					
+if(DEBUG_V)	            print_r($daten);					
+if(DEBUG_V)	            echo "</pre>"; 
+*/
+						// Array zurückgeben für Ausgabe auf der Seite
+						return $daten; 
+
+					} else {
+if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Die Datei konnte nicht geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
+					
+					} // Prüfen ob Datei geöffnet werden konnte END 
 
 				}// Funktion zum Zählen der Seriennummern END
 
@@ -214,11 +276,11 @@ if(DEBUG_V)				echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$seri
 
 
 				// Datensätze zählen
-				$linesTotal = countLines($logDatei);
-if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
+				// $linesTotal = countLines($logDatei);
+// if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesTotal: $linesTotal <i>(" . basename(__FILE__) . ")</i></p>\n";
 
 				// Zählen der häufigsten Seriennummer
-				countSerial($logDatei, $linesTotal);
+				$serialCounts = countSerial($logDatei);
 
 #**********************************************************************************#
 ?>
@@ -236,7 +298,20 @@ if(DEBUG_V)		echo "<p class='debug value'><b>Line " . __LINE__ . "</b>: \$linesT
 	
 	<body>	
 		<h1>Logdatei auslesen</h1>
+        <h2>Anzahl Datensätze / Zeilen: <?php echo $serialCounts['linesTotal']; ?></h2>
 
+        <h2>Die ersten 10 Seriennummern:</h2>
+        <?php
+            // Array der Seriennummern ausgeben
+            $counter = 0;
+            foreach ($serialCounts['serialNumbers'] as $serial => $count) {
+                echo "<p>Seriennummer: $serial, Anzahl: $count</p>";
+                $counter++;
+                if ($counter >= 10) {
+                    break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+                }
+            }
+        ?>
 	</body>
 	
 </html>
