@@ -61,10 +61,10 @@
                 #********************************#
 
 				// composer require dompdf/dompdf
-				require __DIR__ . "/vendor/autoload.php";
+				// require __DIR__ . "/vendor/autoload.php";
 
-				use Dompdf\Dompdf;
-				use Dompdf\Options;
+				// use Dompdf\Dompdf;
+				// use Dompdf\Options;
 
 #**********************************************************************************#
 
