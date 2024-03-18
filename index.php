@@ -31,8 +31,9 @@
 				[x] Funktion zum Zählen der Seriennumern
 				[x] Funktion zum analysieren von Lizenzverstöße
 				[x] Laufzeit zu lange beim Einlesen / wird Blockweise eingelesen
-				[] Fehlermeldung: Warning: gzdecode(): data error in C:\xampp\htdocs\index.php on line 320 / Kommt ca 10 mal insgesamt
+				[] Fehlermeldung: Warning: gzdecode(): data error in C:\xampp\htdocs\index.php on line 156 / Kommt ca 10 mal insgesamt
 				[x] Bearbeiten von 919000 Zeilen ca. 5 Minuten  
+				[] PDF erstellen
 
 */
 #**********************************************************************************#
@@ -41,9 +42,9 @@
                 #********** DEBUGGING **********#
                 #*******************************#
 
-				define('DEBUG', 	true);	// Debugging for main document
-                define('DEBUG_V', 	true);	// Debugging for values
-                define('DEBUG_F', 	true);	// Debugging for functions
+				define('DEBUG', 	false);	// Debugging for main document
+                define('DEBUG_V', 	false);	// Debugging for values
+                define('DEBUG_F', 	false);	// Debugging for functions
 
 #**********************************************************************************#
 
@@ -52,6 +53,18 @@
                 #***************************************#
 
                 $logDatei = './updatev12-access-pseudonymized.log';
+
+#**********************************************************************************#
+
+				#********************************#
+                #********** PDF CONFIG **********#
+                #********************************#
+
+				// composer require dompdf/dompdf
+				require __DIR__ . "/vendor/autoload.php";
+
+				use Dompdf\Dompdf;
+				use Dompdf\Options;
 
 #**********************************************************************************#
 
@@ -136,9 +149,30 @@ if(DEBUG_V)	                echo "<p class='debug value'><b>Line " . __LINE__ . 
 									if($specs !== NULL){
 // if(DEBUG)	                    		echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Dekodieren der Spec <i>(" . basename(__FILE__) . ")</i></p>\n";				
 
-										$specsDecoded = json_decode(gzdecode(base64_decode($specs)), true);
+										// $specsDecoded = json_decode(gzdecode(base64_decode($specs)), true);
+										$decodetData = base64_decode($specs);
+										if($decodetData !== false)
+										{
+// if(DEBUG)									echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Dekodierung base64  erfolgreich <i>(" . basename(__FILE__) . ")</i></p>\n";				
+											$decodetGz = gzdecode($decodetData);
+
+											if ($decodetGz !== false)
+											{
+// if(DEBUG)										echo "<p class='debug ok'><b>Line " . __LINE__ . "</b>: Dekodierung GZ erfolgreich <i>(" . basename(__FILE__) . ")</i></p>\n";				
+												$specsDecoded = json_decode($decodetGz,true);
+
+											}else{
+// if(DEBUG)										echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Dekodierung GZ fehlgeschlagen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+												$specsDecoded = null;
+											}
+											
+										}else
+										{
+// if(DEBUG)									echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Dekodierung base64 fehlgeschlagen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+											$specsDecoded = null;
+										}
 									}else{
-if(DEBUG)	                    		echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Dekodieren der Spec fehlgeschlagen <i>(" . basename(__FILE__) . ")</i></p>\n";				
+// if(DEBUG)	                    		echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Dekodieren der Spec fehlgeschlagen <i>(" . basename(__FILE__) . ")</i></p>\n";				
 
 										$specsDecoded = null;
 
@@ -223,15 +257,52 @@ if(DEBUG_V)	            echo "</pre>";
 */
 						return $daten;			
 
-
 					} else {
 if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: FEHLER: Die Datei konnte nicht geöffnet werden. <i>(" . basename(__FILE__) . ")</i></p>\n";				
-										
-										
+														
 					} // Prüfen ob Datei geöffnet werden konnte END 
 
-
 				}// Funktion zum Zählen der Verstöße gegen die Regel für jede Seriennummer END
+
+
+#**********************************************************************************#
+
+                #********************************#
+                #********** CREATE PDF **********#
+                #********************************#
+
+				function createPdf()
+				{
+if(DEBUG_F)			echo "<p class='debug function'>🌀 <b>Line " . __LINE__ . "</b>: Aufruf " . __FUNCTION__ . "() <i>(" . basename(__FILE__) . ")</i></p>\n";
+
+					$options = new Options;
+					$options->setChroot(__DIR__);
+					$options->setIsRemoteEnabled(true);
+					
+					$dompdf = new Dompdf($options);
+					$dompdf->setPaper("A4", "portrait");
+					$dompdf->loadHtml("hallo welt");
+					$dompdf->render();
+					// $dompdf->stream("test.pdf", ["Attachment" => 0]);
+										
+					#***** CONTENT *****#
+					// $content	 = "<section>";
+
+					// $counter = 0;
+					// if(isset($datenArray['serialNumbers']))
+					// {
+					// 	$content.= "<h2>Die häufigsten 10 Seriennummern:</h2>";
+					// 	foreach ($datenArray['serialNumbers'] as $serial => $count) {
+					// 		$content.= "<p>Seriennummer: $serial, Anzahl: $count</p>";
+					// 		$counter++;
+					// 		if ($counter >= 10) {
+					// 			break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+					// 		}
+					// 	}
+					// 	$content.="</section>";
+					// }
+					#***** CONTENT END *****#
+				}
 
 
 #**********************************************************************************#
@@ -242,6 +313,15 @@ if(DEBUG)	            echo "<p class='debug err'><b>Line " . __LINE__ . "</b>: F
 
 				// Zählen der Lizenzverstöße
                 $datenArray = zaehleVerstoesse($logDatei);
+
+				// PDF der Auswertung erstellen // funktioniert nicht
+				// if (isset($datenArray)){
+				// 	createPdf();
+				// }
+
+				// PDF der Auswertung erstellen
+				// createPdf();
+				// $content = createPdf($datenArray);
 /*
 if(DEBUG_V)	echo "<pre class='debug value'><b>Line " . __LINE__ . "</b>: \$datenArray['cpu'] <i>(" . basename(__FILE__) . ")</i>:<br>\n";					
 if(DEBUG_V)	print_r($datenArray['cpu']);					
@@ -268,91 +348,98 @@ if(DEBUG_V)	echo "</pre>";
 	</head>
 	
 	<body>	
-		<h1>Logdatei auslesen</h1>
-		<br>
-		<hr>
-		<br>
-		<h2> <?php echo (isset($datenArray['linesTotal'])) ? "Anzahl Datensätze / Zeilen:".$datenArray['linesTotal']:''; ?></h2>
-		<br>
-		<hr>
-		<br>
-        <?php
-            // Array der Seriennummern ausgeben
-            $counter = 0;
-			if(isset($datenArray['serialNumbers']))
-			{
-				echo "<h2>Die häufigsten 10 Seriennummern:</h2>";
-				foreach ($datenArray['serialNumbers'] as $serial => $count) {
-					echo "<p>Seriennummer: $serial, Anzahl: $count</p>";
-					$counter++;
-					if ($counter >= 10) {
-						break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+		<section>
+			<h1>Logdatei auswerten: <?php echo (isset($datenArray['linesTotal'])) ? "Anzahl Datensätze / Zeilen:".$datenArray['linesTotal']:''; ?></h1>
+			<?php
+				// Array der Seriennummern ausgeben
+				$counter = 0;
+				if(isset($datenArray['serialNumbers']))
+				{
+					echo "<h2>Die häufigsten 10 Seriennummern</h2>";
+					echo "<table>
+					<thead>
+					<tr><th>Seriennummer</th>
+					<th>Anzahl</th></tr>
+					</thead>
+					<tbody>
+					";
+					foreach ($datenArray['serialNumbers'] as $serial => $count) {
+						echo "<tr><td>$serial</td><td>$count</td></tr>";
+						$counter++;
+						if ($counter >= 10) {
+							break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+						}
 					}
+					echo "</tbody></table>";
 				}
-			}
-        ?>
-		<br>
-		<hr>
-		<br>
-		<?php
-            // Array der Verstöße ausgeben
-            $counter = 0;
-			if(isset($datenArray['verstoesse']))
-			{
-				echo "<h2>Die ersten 10 Verstöße mit Seriennummern auf mehreren mac-Adressen:</h2>";
-				foreach ($datenArray['verstoesse'] as $verstoss => $count) {
-					echo "<p>Seriennummer: $verstoss, Anzahl der verschieden Mac-Adressen: $count</p>";
-					$counter++;
-					if ($counter >= 10) {
-						break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+			?>
+		</section>
+		<section>
+			<?php
+				// Array der Verstöße ausgeben
+				$counter = 0;
+				if(isset($datenArray['verstoesse']))
+				{
+					echo "<h2>Die ersten 10 Verstöße mit Seriennummern auf mehreren mac-Adressen</h2>";
+					echo "<table>
+					<thead>
+					<tr><th>Seriennummer</th>
+					<th>Anzahl der verschieden Mac-Adressen</th></tr>
+					</thead>
+					<tbody>
+					";
+					foreach ($datenArray['verstoesse'] as $verstoss => $count) {
+						echo "<tr><td>$verstoss</td><td>$count</td></tr>";
+						$counter++;
+						if ($counter >= 10) {
+							break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+						}
 					}
+					echo "</tbody></table>";
 				}
-			}
-        ?>
-		<br>
-		<hr>
-		<br>
-		<?php
-            // Array der 10 meisten CPU`s ausgeben
-            $counter = 0;
-			if(isset($datenArray['cpu']))
-			{
-				echo "<h2>Die ersten 10 CPU`s mit den meisten Lizenzen:</h2>";
-				foreach ($datenArray['cpu'] as $cpu => $count) {
-					echo "<p>Hardware: $cpu, Anzahl der Lizenzen: $count</p>";
-					$counter++;
-					if ($counter >= 10) {
-						break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+			?>
+		</section>
+		<section>
+			<?php
+				// Array der 10 meisten CPU`s ausgeben
+				$counter = 0;
+				if(isset($datenArray['cpu']))
+				{
+					echo "<h2>Die ersten 10 CPU`s mit den meisten Lizenzen</h2>";
+					echo "<table>
+					<thead>
+					<tr><th>Seriennummer</th>
+					<th>Anzahl der Lizenzen</th></tr>
+					</thead>
+					<tbody>
+					";
+					foreach ($datenArray['cpu'] as $cpu => $count) {
+						echo "<tr><td>$cpu</td><td>$count</td></tr>";
+						$counter++;
+						if ($counter >= 10) {
+							break; // Schleife abbrechen, wenn 10 Seriennummern ausgegeben wurden
+						}
 					}
-				}
-			}
-        ?>
-		<br>
-		<hr>
-		<br>
-		<?php		
-            // Zeitstempel für Benchmark setzen II
-            $endtime =  microtime(true);
-            // Differenz zwischen $starttime und $endtime berechnen
-            $runtime = $endtime - $starttime;
+					echo "</tbody></table>";
+				}	
+				// Zeitstempel für Benchmark setzen II
+				$endtime =  microtime(true);
+				// Differenz zwischen $starttime und $endtime berechnen
+				$runtime = $endtime - $starttime;
 
-            // Wenn die Laufzeit größer als 60 Sekunden ist
-            if ($runtime >= 60) {
-                $minutes = floor($runtime / 60); // Berechne Minuten
-                $seconds = $runtime % 60; // Berechne verbleibende Sekunden
-                $runtime_display = "$minutes Minuten und $seconds Sekunden";
-            } else {
-                $runtime_display = round($runtime, 5) . " Sekunden"; // Ansonsten, zeige Sekunden
-            }
-            $millisekunde = $runtime * 1000; // Millisekunden
-
-        ?>
-        <h3>Ausführungszeit des PHP Scriptes</h3>
-        <p><?= $runtime_display ?></p>
-        <p><?= $millisekunde ?> Millisekunden</p>
-		<br>
-		<hr>
-		<br>
+				// Wenn die Laufzeit größer als 60 Sekunden ist
+				if ($runtime >= 60) {
+					$minutes = floor($runtime / 60); // Berechne Minuten
+					$seconds = $runtime % 60; // Berechne verbleibende Sekunden
+					$runtime_display = "$minutes Minuten und $seconds Sekunden";
+				} else {
+					$runtime_display = round($runtime, 5) . " Sekunden"; // Ansonsten, zeige Sekunden
+				}
+				$millisekunde = $runtime * 1000.0;  // Millisekunden
+			?>
+			<h3>Ausführungszeit des PHP Scriptes</h3>
+			<p><?= $runtime_display ?></p>
+			<p><?= $millisekunde ?> Millisekunden</p>
+		</section>
 	</body>
-	
 </html>
